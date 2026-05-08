@@ -360,6 +360,7 @@ function Server.GetData<T>(Name: string, Id: any): Data.Class<T>
 end
 
 function Server.WaitForData<T>(Name: string, Id: any): Data.Class<T>
+	local Id = tostring(Id)
 	local DataObj = Server.GetData(Name, Id)
 	local Loaded = DataObj ~= nil
 
