@@ -25,12 +25,12 @@ type Proto<T> = {
 
 type Functions = {
 	Get: <T>(self: Functions, Path: string?) -> T & any,
-	Set: <T>(self: Functions, Path: string, Value: any) -> (),
-	Update: <T>(self: Functions, Path: string, Callback: (T) -> T) -> (),
-	Increment: <T>(self: Functions, Path: string, Amount: number) -> any,
+	Set: <T>(self: Functions, Path: string, Value: any, Abort: boolean?) -> (),
+	Update: <T>(self: Functions, Path: string, Callback: (T) -> T, Abort: boolean?) -> (),
+	Increment: <T>(self: Functions, Path: string, Amount: number, Abort: boolean?) -> any,
 
-	ArrayInsert: <T>(self: Functions, Path: string, Value: any, Index: number?) -> any,
-	ArrayRemove: <T>(self: Functions, Path: string, Index: number) -> any,
+	ArrayInsert: <T>(self: Functions, Path: string, Value: any, Index: number?, Abort: boolean?) -> any,
+	ArrayRemove: <T>(self: Functions, Path: string, Index: number, Abort: boolean?) -> any,
 
 	OnChanged: <T>(self: Functions, Path: string, Callback: (any, any) -> ()) -> () -> (),
 	OnArrayInserted: <T>(self: Functions, Path: string, Callback: (number, any) -> ()) -> () -> (),

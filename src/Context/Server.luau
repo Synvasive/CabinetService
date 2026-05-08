@@ -134,11 +134,100 @@ function GetDocument(Name: string, Id: any)
 
 		if not Cabinet.Data[Id] then
 			local DataObj = Data.new(Document, Result.data)
-			local OriginalDestroy = DataObj.Destroy
 
-			function DataObj.Destroy()
-				OriginalDestroy(DataObj)
-				Cabinet.Data[Id] = nil
+			do --> Replication Layer <--
+				local OriginalSet = DataObj.Set
+				local OriginalDestroy = DataObj.Destroy
+				local OriginalArrayInsert = DataObj.ArrayInsert
+				local OriginalArrayRemove = DataObj.ArrayRemove
+
+				local OriginalUpdate = DataObj.Update
+				local OriginalIncrement = DataObj.Increment
+
+				function DataObj.Set(self, Path, Value, Abort)
+					local Result = OriginalSet(self, Path, Value)
+
+					if Abort ~= false then
+						Server._Replicate({
+							Id = Id,
+							Name = Name,
+
+							Action = "Set",
+							Args = { Path, Result },
+						})
+					end
+
+					return Result
+				end
+
+				function DataObj.Update(self, Path, Callback, Abort)
+					local Result = OriginalUpdate(self, Path, Callback)
+
+					if Abort ~= false then
+						Server._Replicate({
+							Id = Id,
+							Name = Name,
+
+							Action = "Set",
+							Args = { Path, Result },
+						})
+					end
+
+					return Result
+				end
+
+				function DataObj.Increment(self, Path, Amount, Abort)
+					local Result = OriginalIncrement(self, Path, Amount)
+
+					if Abort ~= false then
+						Server._Replicate({
+							Id = Id,
+							Name = Name,
+
+							Action = "Set",
+							Args = { Path, Result },
+						})
+					end
+
+					return Result
+				end
+
+				function DataObj.ArrayInsert(self, Path, Value, Index, Abort)
+					local Result = OriginalArrayInsert(self, Path, Value, Index)
+
+					if Abort ~= false then
+						Server._Replicate({
+							Id = Id,
+							Name = Name,
+
+							Action = "ArrayInsert",
+							Args = { Path, Value, Index },
+						})
+					end
+
+					return Result
+				end
+
+				function DataObj.ArrayRemove(self, Path, Index, Abort)
+					local Result = OriginalArrayRemove(self, Path, Index)
+
+					if Abort ~= false then
+						Server._Replicate({
+							Id = Id,
+							Name = Name,
+
+							Action = "ArrayRemove",
+							Args = { Path, Index },
+						})
+					end
+
+					return Result
+				end
+
+				function DataObj.Destroy()
+					OriginalDestroy(DataObj)
+					Cabinet.Data[Id] = nil
+				end
 			end
 
 			Cabinet.Data[Id] = DataObj
@@ -310,55 +399,22 @@ end
 function Server.Set(Name: string, Id: any, Path: string, Value: any, Abort: boolean?)
 	local Data, Message = Server.GetData(Name, Id)
 	assert(Data, Message.reason)
-	local Result = Data:Set(Path, Value)
 
-	if Abort ~= false then
-		Server._Replicate({
-			Id = Id,
-			Name = Name,
-
-			Action = "Set",
-			Args = { Path, Result },
-		})
-	end
-
-	return Result
+	return Data:Set(Path, Value, Abort)
 end
 
 function Server.Increment(Name: string, Id: any, Path: string, Amount: number, Abort: boolean?)
 	local Data, Message = Server.GetData(Name, Id)
 	assert(Data, Message.reason)
-	local Result = Data:Increment(Path, Amount)
 
-	if Abort ~= false then
-		Server._Replicate({
-			Id = Id,
-			Name = Name,
-
-			Action = "Set",
-			Args = { Path, Result },
-		})
-	end
-
-	return Result
+	return Data:Increment(Path, Amount, Abort)
 end
 
 function Server.Update(Name: string, Id: any, Path: string, Callback: (any) -> any, Abort: boolean?)
 	local Data, Message = Server.GetData(Name, Id)
 	assert(Data, Message.reason)
-	local Result = Data:Update(Path, Callback)
 
-	if Abort ~= false then
-		Server._Replicate({
-			Id = Id,
-			Name = Name,
-
-			Action = "Set",
-			Args = { Path, Result },
-		})
-	end
-
-	return Result
+	return Data:Update(Path, Callback, Abort)
 end
 
 function Server.Mutate(Name: string, Id: any, Mutator: (any) -> any)
@@ -385,37 +441,15 @@ end
 function Server.ArrayInsert(Name: string, Id: any, Path: string, Value: any, Index: number?, Abort: boolean?)
 	local Data, Message = Server.GetData(Name, Id)
 	assert(Data, Message.reason)
-	local Result = Data:ArrayInsert(Path, Value, Index)
 
-	if Abort ~= false then
-		Server._Replicate({
-			Id = Id,
-			Name = Name,
-
-			Action = "ArrayInsert",
-			Args = { Path, Value, Index },
-		})
-	end
-
-	return Result
+	return Data:ArrayInsert(Path, Value, Index, Abort)
 end
 
 function Server.ArrayRemove(Name: string, Id: any, Path: string, Index: number, Abort: boolean?)
 	local Data, Message = Server.GetData(Name, Id)
 	assert(Data, Message.reason)
-	local Result = Data:ArrayRemove(Path, Index)
 
-	if Abort ~= false then
-		Server._Replicate({
-			Id = Id,
-			Name = Name,
-
-			Action = "ArrayRemove",
-			Args = { Path, Index },
-		})
-	end
-
-	return Result
+	return Data:ArrayRemove(Path, Index, Abort)
 end
 
 function Server.OnChanged(Name: string, Id: any, Path: string, Callback: (any, any) -> ())
