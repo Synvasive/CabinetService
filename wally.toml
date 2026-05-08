@@ -1,7 +1,14 @@
 [package]
-name = "jaydon/cabinetservice"
-version = "0.1.0"
+name = "synvasive/cabinetservice"
+description = "Session-locked DataStore solution with automatic client replication"
+
+version = "1.0.0"
+license = "MIT"
+
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
+
+exclude = ["**"]
+include = ["src", "src/**/*", "default.project.json", "wally.toml", "LICENSE", "README.md"]
 
 [dependencies]
