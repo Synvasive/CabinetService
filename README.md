@@ -138,16 +138,16 @@ Initialises a store and returns a handle. Must be called on the server.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `Template` | `T` | — | Default data shape, also used to generate the type validator |
-| `DocumentName` | `string` | — | DataStore key name |
+| `Name` | `string` | - | DataStore key name |
+| `Template` | `T` | - | Default data shape, also used to generate the type validator |
 | `PlayerStore` | `boolean` | `true` | If true, manages PlayerAdded/PlayerRemoving automatically |
 | `Interface` | `((T) -> boolean)?` | auto | Custom type validator — generated from template if omitted |
 | `LockSessions` | `boolean` | `true` | Enables session locking |
 | `UseMock` | `boolean` | `false` | Uses a mock DataStore, data is erased on close |
 | `DontSave` | `boolean` | `false` | Data is erased on server close |
 | `ResetData` | `boolean` | `false` | Erases data on load |
-| `ViewedUserId` | `number?` | — | Load a different user's data |
-| `OverridenUserId` | `number?` | — | Override the userId used for the document key |
+| `ViewedUserId` | `number?` | - | Load a different user's data |
+| `OverridenUserId` | `number?` | - | Override the userId used for the document key |
 
 ### `Store.WaitForData(Id)`
 Yields until the document for `Id` is open and returns the `Data` object. Safe to call multiple times — returns immediately if already loaded.
