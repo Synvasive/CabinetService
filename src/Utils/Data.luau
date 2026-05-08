@@ -131,14 +131,19 @@ function Data.Increment<T>(Class: Data<T>, Path: string, Amount: number)
 		return nil
 	end
 
-	return Class:Set(Path, Previous + Amount)
+	SetPath(Class.Data, Path, Previous + Amount)
+	Class:_FireSignal(Path, Previous)
+
+	return Previous + Amount
 end
 
 function Data.Update<T>(Class: Data<T>, Path: string, Callback: (any) -> any)
 	local Current = Class:Get(Path)
 	local New = Callback(Current)
 
-	Class:Set(Path, New)
+	SetPath(Class.Data, Path, New)
+	Class:_FireSignal(Path, Current)
+
 	return New
 end
 
@@ -243,16 +248,16 @@ function Data._GetSignal<T>(Class: Data<T>, Path: string, Type: string): Signal.
 		return Signals[Path]
 	end
 
-	local newSignal = Signal.new()
-	local originalDestroy = newSignal.Destroy
+	local NewSignal = Signal.new()
+	local OriginalDestroy = NewSignal.Destroy
 
-	function newSignal.Destroy()
+	function NewSignal.Destroy()
 		Signals[Path] = nil
-		originalDestroy(newSignal)
+		OriginalDestroy(NewSignal)
 	end
 
-	Signals[Path] = newSignal
-	return newSignal
+	Signals[Path] = NewSignal
+	return NewSignal
 end
 
 function Data.Destroy<T>(Class: Data<T>)

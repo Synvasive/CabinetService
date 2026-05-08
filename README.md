@@ -1,6 +1,5 @@
 # CabinetService
-
-A session-locked DataStore solution for Roblox with automatic client replication.
+An intuitive wrapper for DocumentService with automatic client replication based on DataService by leif.
 
 ## Features
 
@@ -17,18 +16,20 @@ A session-locked DataStore solution for Roblox with automatic client replication
 Add CabinetService to your `wally.toml`:
 ```toml
 [dependencies]
-CabinetService = "synvasive/cabinetservice@^1.0.0"
+CabinetService = "synvasive/cabinetservice@1.0.0"
 ```
 Then run:
 ```bash
 wally install
 ```
 
+### Roblox
+Go to https://create.roblox.com/store/asset/102495465895441/CabinetService and download the model
+
 ### Manual
 Copy the `src` folder into your project and require `init.luau` as `CabinetService`.
 
 ## Usage
-
 ### Server — Player Store
 
 ```luau
