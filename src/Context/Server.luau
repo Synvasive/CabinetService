@@ -18,8 +18,9 @@ local DocumentService = require(Packages.DocumentService)
 local Signal = require(Packages.Signal)
 local Remotes = require(Network.Server)
 
-local Table = require(Utils.Table)
+local Serializer = require(Utils.Serializer)
 local Config = require(Utils.Config)
+local Table = require(Utils.Table)
 local Data = require(Utils.Data)
 
 --> Main <--
@@ -125,6 +126,8 @@ function GetDocument(Name: string, Id: any)
 		Result = Document:Open()
 	end
 
+	local CachedData = Serializer.Deserialize(Result.data)
+
 	if Result.success then
 		Cabinet.Documents[Id] = Document
 
@@ -133,7 +136,7 @@ function GetDocument(Name: string, Id: any)
 		end)
 
 		if not Cabinet.Data[Id] then
-			local DataObj = Data.new(Document, Result.data)
+			local DataObj = Data.new(Document, CachedData)
 
 			do --> Replication Layer <--
 				local OriginalSet = DataObj.Set
@@ -234,7 +237,7 @@ function GetDocument(Name: string, Id: any)
 		end
 
 		if not Cabinet.Options.PlayerStore then
-			Remotes.Replicate.FireAll(Name, Id, Config.Actions.Init, { Result.data })
+			Remotes.Replicate.FireAll(Name, Id, Config.Actions.Init, { CachedData })
 		end
 
 		local Signals = Server.Signals[Name]
@@ -258,11 +261,12 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 
 	local UseMock = Options.UseMock
 	local DataStoreName = Options.Name
-	local DocumentInterface = Options.Interface or Interface(Options.Template)
+	local Template = Serializer.Serialize(Options.Template)
+	local DocumentInterface = Interface(Template)
 
 	local DataStore = DataStoreService:GetDataStore(`{DataStoreName}_{UseMock and "M" or "L"}`)
 	local DocumentStore = DocumentService.DocumentStore.new {
-		default = Options.Template,
+		default = Template,
 		check = DocumentInterface,
 
 		dataStore = DataStore,

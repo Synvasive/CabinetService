@@ -22,7 +22,7 @@ local function IsTagged(Value: any): boolean
 end
 
 local function GetHandler(Tag: string): Types.Handler<any, any>?
-	return Registry[Tag] or Types.BuiltInHandlers[Tag]
+	return Registry[Tag] or Types.Handlers[Tag]
 end
 
 --> Methods <--
