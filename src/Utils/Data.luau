@@ -1,6 +1,8 @@
 --!nolint LocalShadow
 --> Packages <--
 local Table = require("../Utils/Table")
+local Serializer = require("../Utils/Serializer")
+
 local Signal = require("../Packages/Signal")
 local DocumentService = require("../Packages/DocumentService")
 
@@ -67,7 +69,7 @@ function FromDocument<T>(Document: DocumentService.Document<T>, Cache: T): Data<
 	return setmetatable({
 		Changed = Signal.new(),
 
-		Data = Table.Clone(Cache, true),
+		Data = Serializer.Deserialize(Table.Clone(Cache, true)),
 		Document = Document,
 
 		Signals = {
@@ -82,7 +84,7 @@ function FromCache<T>(Cache: T): Data<T>
 	return setmetatable({
 		Changed = Signal.new(),
 
-		Data = Table.Clone(Cache, true),
+		Data = Serializer.Deserialize(Table.Clone(Cache, true)),
 		Document = nil,
 
 		Signals = {
@@ -219,14 +221,16 @@ function Data._Update<T>(Class: Data<T>)
 
 	if Class.Document:isLocked() then
 		local Data = Table.Clone(Class.Data, true)
-		Class.Document:SetCache(Data)
+		Class.Document:SetCache(Serializer.Serialize(Data))
+
 		return
 	end
 
 	task.spawn(function()
 		xpcall(function()
 			Class.Document:Update(function()
-				return Table.Clone(Class.Data, true)
+				local Data = Table.Clone(Class.Data, true)
+				return Serializer.Serialize(Data)
 			end)
 		end, warn)
 	end)
