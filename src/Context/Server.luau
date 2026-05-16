@@ -126,8 +126,6 @@ function GetDocument(Name: string, Id: any)
 		Result = Document:Open()
 	end
 
-	local CachedData = Serializer.Deserialize(Result.data)
-
 	if Result.success then
 		Cabinet.Documents[Id] = Document
 
@@ -136,7 +134,7 @@ function GetDocument(Name: string, Id: any)
 		end)
 
 		if not Cabinet.Data[Id] then
-			local DataObj = Data.new(Document, CachedData)
+			local DataObj = Data.new(Document, Result.data)
 
 			do --> Replication Layer <--
 				local OriginalSet = DataObj.Set
@@ -237,7 +235,7 @@ function GetDocument(Name: string, Id: any)
 		end
 
 		if not Cabinet.Options.PlayerStore then
-			Remotes.Replicate.FireAll(Name, Id, Config.Actions.Init, { CachedData })
+			Remotes.Replicate.FireAll(Name, Id, Config.Actions.Init, { Result.data })
 		end
 
 		local Signals = Server.Signals[Name]
@@ -261,8 +259,14 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 
 	local UseMock = Options.UseMock
 	local DataStoreName = Options.Name
+
 	local Template = Serializer.Serialize(Options.Template)
-	local DocumentInterface = Interface(Template)
+	local Interface = Options.Interface or Interface(Template)
+
+	local DocumentInterface = function(Data)
+		local Deserialized = Serializer.Deserialize(Data)
+		return Interface(Deserialized)
+	end
 
 	local DataStore = DataStoreService:GetDataStore(`{DataStoreName}_{UseMock and "M" or "L"}`)
 	local DocumentStore = DocumentService.DocumentStore.new {
@@ -316,21 +320,19 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 end
 
 function Server.PlayerAdded<T>(Player: Player, Cabinet: Cabinet<T>)
-	local UserId = Cabinet.Options.OverridenUserId or Cabinet.Options.ViewedUserId or Player.UserId
-	local Document, Result = GetDocument(Cabinet.Options.Name, tostring(UserId))
+	local UserId = tostring(Cabinet.Options.OverridenUserId or Cabinet.Options.ViewedUserId or Player.UserId)
+
+	if Cabinet.Options.ResetData and not Cabinet.Options.ViewedUserId then
+		local Document = Cabinet.Store:GetDocument(UserId)
+		Document:Erase()
+	end
+
+	local _, Result = GetDocument(Cabinet.Options.Name, UserId)
 
 	if not Result.success then
 		warn("Failed to load data for player:", Player.Name, "Reason:", Result.reason)
 		Player:Kick("Error Retrieving Data. Roblox servers may be down.")
 		return
-	end
-
-	if Cabinet.Options.ResetData and not Cabinet.Options.ViewedUserId then
-		if Document:IsOpen() then
-			Document:Close()
-		end
-
-		Document:Erase()
 	end
 end
 
