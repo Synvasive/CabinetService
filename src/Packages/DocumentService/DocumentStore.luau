@@ -31,6 +31,7 @@ export type DocumentStoreProps<T> = {
 	migrations: Migrations?,
 	lockSessions: boolean,
 	bindToClose: boolean?,
+	saveOnClose: boolean?,
 }
 
 export type DocumentStore<T> = typeof(setmetatable(
@@ -47,7 +48,7 @@ export type DocumentStore<T> = typeof(setmetatable(
 		_documentsToClose: number,
 	},
 	DocumentStore
-	))
+))
 
 local gameClosing = false
 
@@ -98,7 +99,7 @@ function DocumentStore.new<T>(props: DocumentStoreProps<T>): DocumentStore<T>
 	-- Yielding on BindToClose in studio can cause studio to take a very long
 	-- time to stop play test sessions, so we give the user the option to
 	-- disable this behavior.
-	if _G.IS_ROBLOX and props.bindToClose ~= false then
+	if (_G.IS_ROBLOX and props.bindToClose ~= false) or props.saveOnClose ~= false then
 		game:BindToClose(function()
 			gameClosing = true
 

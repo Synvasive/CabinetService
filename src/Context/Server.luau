@@ -276,6 +276,7 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 		dataStore = DataStore,
 		migrations = Options.Migrations,
 		lockSessions = Options.LockSessions,
+		saveOnClose = not Cabinet.Options.DontSave,
 	}
 
 	Cabinet.Store = DocumentStore
@@ -302,11 +303,13 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 		Server.PlayerRemoving(Player, Cabinet)
 	end)
 
-	if Cabinet.Options.DontSave or Cabinet.Options.UseMock then
+	if Cabinet.Options.UseMock then
 		game:BindToClose(function()
-			for _, Document in Cabinet.Documents do
-				if Document:IsOpen() and Document:Close().success then
-					Document:Erase()
+			for _, Document: DocumentService.Document<typeof(Template)> in Cabinet.Documents do
+				if Document:IsOpen() then
+					Document:SetCache(Table.Clone(Template, true))
+					Document:Save()
+					Document:Close()
 				end
 			end
 		end)
@@ -330,8 +333,8 @@ function Server.PlayerAdded<T>(Player: Player, Cabinet: Cabinet<T>)
 	local _, Result = GetDocument(Cabinet.Options.Name, UserId)
 
 	if not Result.success then
-		warn("Failed to load data for player:", Player.Name, "Reason:", Result.reason)
-		Player:Kick("Error Retrieving Data. Roblox servers may be down.")
+		warn("Failed to load data for player:", Player.Name, "Cabinet:", Cabinet.Options.Name, "Reason:", Result.reason)
+		-- Player:Kick("Error Retrieving Data. Roblox servers may be down.")
 		return
 	end
 end

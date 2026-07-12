@@ -34,9 +34,9 @@ type Functions = {
 	ArrayInsert: <T>(self: Functions, Path: string, Value: any, Index: number?, Abort: boolean?) -> any,
 	ArrayRemove: <T>(self: Functions, Path: string, Index: number, Abort: boolean?) -> any,
 
-	OnChanged: <T>(self: Functions, Path: string, Callback: (any, any) -> ()) -> () -> (),
-	OnArrayInserted: <T>(self: Functions, Path: string, Callback: (number, any) -> ()) -> () -> (),
-	OnArrayRemoved: <T>(self: Functions, Path: string, Callback: (number, any) -> ()) -> () -> (),
+	OnChanged: <T>(self: Functions, Path: string, Callback: (Old: any, New: any) -> ()) -> () -> (),
+	OnArrayInserted: <T>(self: Functions, Path: string, Callback: (Index: number, Value: any) -> ()) -> () -> (),
+	OnArrayRemoved: <T>(self: Functions, Path: string, Callback: (Index: number, Value: any) -> ()) -> () -> (),
 
 	Destroy: <T>(self: Functions) -> (),
 }
