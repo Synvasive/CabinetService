@@ -71,24 +71,30 @@ export type Server = typeof(Server)
 
 --> Functions <--
 function Interface<T>(Template: T): (T) -> boolean
-	local function CheckTypes(Data, Reference): boolean
+	local function CheckTypes(Data, Reference, PathStr): boolean
 		for Key, Value in Reference do
+			const Path = if PathStr then `{PathStr}.{tostring(Key)}` else tostring(Key)
+
 			if Data[Key] == nil then
-				return false
+				warn(`Missing field: {Path}`)
+				return false, `Missing field: {Path}`
 			end
 
 			if typeof(Data[Key]) ~= typeof(Value) then
-				return false
+				warn(`Type mismatch at {Path}: expected {typeof(Value)}, got {typeof(Data[Key])}`)
+				return false, `Type mismatch at {Path}: expected {typeof(Value)}, got {typeof(Data[Key])}`
 			end
 
 			if typeof(Value) == "table" then
-				if not CheckTypes(Data[Key], Value) then
-					return false
+				const Success, Error = CheckTypes(Data[Key], Value, Path)
+				if not Success then
+					warn("Top:", Error)
+					return false, Error
 				end
 			end
 		end
 
-		return true
+		return true, nil
 	end
 
 	return function(Data: T): boolean
@@ -251,7 +257,7 @@ end
 
 --> Methods <--
 function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Data.Class<T> }
-	assert(RunService:IsServer(), "SaveServiceServer can only be ran on the Server.")
+	assert(RunService:IsServer(), "CabinetServiceServer can only be ran on the Server.")
 
 	--> There should not be any "Default" Document
 	local Options = Table.Reconcile(Options, Config.Default)
@@ -263,15 +269,10 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 	local Template = Serializer.Serialize(Options.Template)
 	local Interface = Options.Interface or Interface(Template)
 
-	local DocumentInterface = function(Data)
-		local Deserialized = Serializer.Deserialize(Data)
-		return Interface(Deserialized)
-	end
-
 	local DataStore = DataStoreService:GetDataStore(`{DataStoreName}_{UseMock and "M" or "L"}`)
 	local DocumentStore = DocumentService.DocumentStore.new {
 		default = Template,
-		check = DocumentInterface,
+		check = Interface,
 
 		dataStore = DataStore,
 		migrations = Options.Migrations,
