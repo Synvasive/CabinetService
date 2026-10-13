@@ -22,7 +22,6 @@ local Serializer = require(Utils.Serializer)
 local Config = require(Utils.Config)
 local Table = require(Utils.Table)
 local Data = require(Utils.Data)
-local Mock = require(Utils.Mock)
 
 --> Main <--
 local Server = {
@@ -30,6 +29,8 @@ local Server = {
 	Options = {},
 	Signals = {},
 }
+
+local Mocks = {}
 
 --> Types <--
 type Rule = "All" | "Owner" | "None" | (Player: Player, Id: string) -> boolean
@@ -118,6 +119,38 @@ function Interface<T>(Name: string, Template: T): (T) -> boolean
 
 		return Success
 	end
+end
+
+function MockStore(Name: string)
+	if Mocks[Name] then
+		return Mocks[Name]
+	end
+
+	local Keys = {}
+	local Store = {}
+
+	function Store.UpdateAsync(_, Key: string, Transform: (any, any) -> any)
+		local Result = Transform(Copy(Keys[Key]), nil)
+		if Result ~= nil then
+			Keys[Key] = Copy(Result)
+		end
+
+		return Copy(Keys[Key]), nil
+	end
+
+	function Store.GetAsync(_, Key: string)
+		return Copy(Keys[Key]), nil
+	end
+
+	function Store.RemoveAsync(_, Key: string)
+		local Previous = Keys[Key]
+		Keys[Key] = nil
+
+		return Previous, nil
+	end
+
+	Mocks[Name] = Store
+	return Store
 end
 
 function GetCabinet(Name: string)
@@ -283,8 +316,10 @@ function Attach<T>(Name: string, Id: string, Document: Document<T>, Cache: T): D
 			Cleanups,
 			Document:HookAfter("Close", function()
 				for _, Cleanup in Cleanups do
-					task.defer(Cleanup)
+					Cleanup()
 				end
+
+				table.clear(Cleanups)
 
 				if Cabinet.Documents[Id] == Document then
 					Cabinet.Documents[Id] = nil
@@ -379,7 +414,7 @@ function Server.Init<T>(Options: DataOptions<T>): Handle<T>
 		return Validate(Data)
 	end
 
-	local DataStore = if Options.UseMock then Mock.new(Options.Name) else DataStoreService:GetDataStore(`{Options.Name}_L`)
+	local DataStore = if Options.UseMock then MockStore(Options.Name) else DataStoreService:GetDataStore(`{Options.Name}_L`)
 	local DocumentStore = DocumentService.DocumentStore.new {
 		default = Template,
 		check = Check,
