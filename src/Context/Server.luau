@@ -85,7 +85,7 @@ function Interface<T>(Template: T): (T) -> boolean
 				return false, `Type mismatch at {Path}: expected {typeof(Value)}, got {typeof(Data[Key])}`
 			end
 
-			if typeof(Value) == "table" then
+			if typeof(Value) == "table" and not Table.IsList(Value) then
 				const Success, Error = CheckTypes(Data[Key], Value, Path)
 				if not Success then
 					warn("Top:", Error)
@@ -267,12 +267,20 @@ function Server.Init<T>(Options: DataOptions<T>): { WaitForData: (Id: any) -> Da
 	local DataStoreName = Options.Name
 
 	local Template = Serializer.Serialize(Options.Template)
-	local Interface = Options.Interface or Interface(Template)
+	local Validate = Options.Interface or Interface(Template)
+
+	const function Check(Data)
+		if typeof(Data) == "table" then
+			Table.ReconcileInPlace(Data, Template)
+		end
+
+		return Validate(Data)
+	end
 
 	local DataStore = DataStoreService:GetDataStore(`{DataStoreName}_{UseMock and "M" or "L"}`)
 	local DocumentStore = DocumentService.DocumentStore.new {
 		default = Template,
-		check = Interface,
+		check = Check,
 
 		dataStore = DataStore,
 		migrations = Options.Migrations,
@@ -335,7 +343,11 @@ function Server.PlayerAdded<T>(Player: Player, Cabinet: Cabinet<T>)
 
 	if not Result.success then
 		warn("Failed to load data for player:", Player.Name, "Cabinet:", Cabinet.Options.Name, "Reason:", Result.reason)
-		-- Player:Kick("Error Retrieving Data. Roblox servers may be down.")
+
+		if not RunService:IsStudio() then
+			Player:Kick("Error Retrieving Data. Roblox servers may be down.")
+		end
+
 		return
 	end
 end

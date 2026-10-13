@@ -5,15 +5,28 @@ local HttpService = game:GetService("HttpService")
 --> Main <--
 local Table = {}
 
---> Methods <--
-function Table.Freeze<T>(Original: T): T
-	for Index, Value in Original :: any do
-		if typeof(Value) == "table" then
-			(Original :: any)[Index] = Table.Freeze(Value)
-		end
+function Table.IsTagged(Value: any): boolean
+	return typeof(Value) == "table" and typeof(Value[1]) == "string" and string.sub(Value[1], 1, 1) == "$"
+end
+
+function Table.IsList(Value: any): boolean
+	if typeof(Value) ~= "table" then
+		return false
 	end
 
-	return table.freeze(Original :: any) :: any
+	local Count = 0
+	local Max = 0
+
+	for Key in Value do
+		if typeof(Key) ~= "number" then
+			return false
+		end
+
+		Count += 1
+		Max = math.max(Max, Key)
+	end
+
+	return Count > 0 and Max == Count
 end
 
 function Table.Clone<T>(Original: T, Deep: boolean): T
@@ -117,7 +130,11 @@ function Table.Reconcile<T, K>(Original: T, Template: K): T & K
 
 	for Index, Value in Template do
 		if typeof(Result[Index]) == "table" and typeof(Value) == "table" then
-			Result[Index] = Table.Reconcile(Result[Index], Value, true)
+			if Table.IsTagged(Result[Index]) or Table.IsTagged(Value) or Table.IsList(Result[Index]) or Table.IsList(Value) then
+				continue
+			end
+
+			Result[Index] = Table.Reconcile(Result[Index], Value)
 			continue
 		elseif typeof(Result[Index]) ~= "nil" then
 			continue
@@ -131,6 +148,23 @@ function Table.Reconcile<T, K>(Original: T, Template: K): T & K
 	end
 
 	return Result
+end
+
+function Table.ReconcileInPlace<T, K>(Original: T, Template: K): T
+	if typeof(Original) ~= "table" or table.isfrozen(Original) then
+		return Original
+	end
+
+	local Result = Table.Reconcile(Original, Template)
+	if typeof(Result) ~= "table" then
+		return Original
+	end
+
+	for Index, Value in Result do
+		Original[Index] = Value
+	end
+
+	return Original
 end
 
 function Table.Compare(First, Second): boolean
