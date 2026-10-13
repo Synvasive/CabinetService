@@ -146,8 +146,8 @@ Initialises a store and returns a handle. Must be called on the server.
 | `UseMock` | `boolean` | `false` | Uses an in-memory DataStore, data is lost when the server closes |
 | `DontSave` | `boolean` | `false` | Changes are never written to the DataStore |
 | `ResetData` | `boolean` | `false` | Erases data on load |
-| `ViewedUserId` | `number?` | - | Load a different user's data read-only, without a session lock |
-| `OverridenUserId` | `number?` | - | Override the userId used for the document key |
+| `ViewedUserId` | `number?` | - | Load another user's data in place of each player's own, read-only and without a session lock |
+| `OverridenUserId` | `number?` | - | Load and save another user's data in place of each player's own. Players still use their own UserId everywhere |
 | `Replicate` | `"All" \| "Owner" \| "None" \| (Player, Id) -> boolean` | `"Owner"` for player stores, `"All"` otherwise | Which clients receive the document and its changes |
 | `CanFetch` | `((Player, Id, Path?) -> boolean)?` | `Replicate` rule | Which clients may read the document with `Client.Fetch` |
 

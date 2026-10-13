@@ -170,7 +170,7 @@ function GetCabinet(Name: string)
 	return Server.Cabinet[Name]
 end
 
-function DocumentId<T>(Cabinet: Cabinet<T>, Player: Player): string
+function DocumentKey<T>(Cabinet: Cabinet<T>, Player: Player): string
 	return tostring(Cabinet.Options.OverridenUserId or Cabinet.Options.ViewedUserId or Player.UserId)
 end
 
@@ -337,7 +337,7 @@ function Attach<T>(Name: string, Id: string, Document: Document<T>, Cache: T): D
 	return DataObj
 end
 
-function GetDocument(Name: string, Id: any)
+function GetDocument(Name: string, Id: any, Key: string?)
 	local Id = tostring(Id)
 	local Cabinet = GetCabinet(Name)
 	local Existing = Cabinet.Documents[Id]
@@ -359,9 +359,16 @@ function GetDocument(Name: string, Id: any)
 
 	Cabinet.Opening[Id] = true
 
-	local Document = Cabinet.Store:GetDocument(Id) :: Document<any>
+	local Document = Cabinet.Store:GetDocument(Key or Id) :: Document<any>
 	while Document:IsClosing() do
 		task.wait()
+	end
+
+	if Document:IsOpen() then
+		Cabinet.Opening[Id] = nil
+		Server._Release(Name, Id)
+
+		return nil, { success = false, reason = `Document "{Key or Id}" is already open for another player` }, false
 	end
 
 	local Success, Result = pcall(Document.Open, Document)
@@ -477,14 +484,15 @@ end
 
 function Server.PlayerAdded<T>(Player: Player, Cabinet: Cabinet<T>)
 	local Name = Cabinet.Options.Name
-	local Id = DocumentId(Cabinet, Player)
+	local Id = tostring(Player.UserId)
+	local Key = DocumentKey(Cabinet, Player)
 
 	if Cabinet.Options.ResetData and not Cabinet.Options.ViewedUserId and not Cabinet.Documents[Id] then
-		Cabinet.Store:GetDocument(Id):Erase()
+		Cabinet.Store:GetDocument(Key):Erase()
 	end
 
 	Cabinet.Owners[Id] = Player
-	local _, Result, Fresh = GetDocument(Name, Id)
+	local _, Result, Fresh = GetDocument(Name, Id, Key)
 
 	if not Result.success then
 		warn("Failed to load data for player:", Player.Name, "Cabinet:", Name, "Reason:", Result.reason)
@@ -507,16 +515,10 @@ function Server.PlayerAdded<T>(Player: Player, Cabinet: Cabinet<T>)
 end
 
 function Server.PlayerRemoving<T>(Player: Player, Cabinet: Cabinet<T>)
-	local Id = DocumentId(Cabinet, Player)
+	local Id = tostring(Player.UserId)
 
 	if Cabinet.Opening[Id] then
 		return
-	end
-
-	for _, Other in Players:GetPlayers() do
-		if Other ~= Player and DocumentId(Cabinet, Other) == Id then
-			return
-		end
 	end
 
 	Server.Close(Cabinet.Options.Name, Id)
@@ -722,7 +724,7 @@ function Server._Expected<T>(Cabinet: Cabinet<T>, Id: string): boolean
 	end
 
 	for _, Player in Players:GetPlayers() do
-		if DocumentId(Cabinet, Player) == Id then
+		if tostring(Player.UserId) == Id then
 			return true
 		end
 	end

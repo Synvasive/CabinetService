@@ -9,8 +9,8 @@
 	.UseMock boolean? -- Use an in-memory DataStore for testing. Data is lost when the server closes.
 	.Migrations { [number]: (data: any) -> any }? -- List of migration functions to update old data formats.
 
-	.ViewedUserId number? -- User ID to view data for. Opens the document without a session lock and never saves.
-	.OverridenUserId number? -- User ID to override for the profile. Use to play on another player's save.
+	.ViewedUserId number? -- Load this user's data in place of each player's own. Read-only, no session lock, never saves.
+	.OverridenUserId number? -- Load and save this user's data in place of each player's own. Players still use their own UserId everywhere.
 
 	.DontSave boolean? -- Prevent saving the profile. Use for testing without saving.
 	.ResetData boolean? -- Reset the data on player join. Use to wipe data for testing
