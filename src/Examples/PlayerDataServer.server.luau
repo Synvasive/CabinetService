@@ -32,13 +32,16 @@ const PLAYER_TEMPLATE: PlayerTemplate = {
 -- PlayerStore = true means CabinetService manages PlayerAdded/PlayerRemoving automatically
 local PlayerStore = Server.Init({
 	Template = PLAYER_TEMPLATE,
-	DocumentName = STORE_NAME,
+	Name = STORE_NAME,
 })
 
 --> Main <--
 Players.PlayerAdded:Connect(function(Player)
 	-- Yields until this player's document is fully open
 	local Data = PlayerStore.WaitForData(Player.UserId)
+	if not Data then
+		return
+	end
 
 	print(Player.Name, "loaded with", Data:Get("Coins"), "coins")
 
@@ -60,6 +63,10 @@ end)
 -- Give a player an item — safe to call from any server script at any time
 local function GiveItem(Player: Player, Item: string)
 	local Data = PlayerStore.WaitForData(Player.UserId)
+	if not Data then
+		return
+	end
+
 	Data:ArrayInsert("Inventory", Item)
 end
 
@@ -68,11 +75,15 @@ local XP_PER_LEVEL = 1000
 
 local function AddXP(Player: Player, Amount: number)
 	local Data = PlayerStore.WaitForData(Player.UserId)
+	if not Data then
+		return
+	end
+
 	local NewXP = Data:Increment("XP", Amount)
 
 	if NewXP >= XP_PER_LEVEL then
 		Data:Increment("Level", 1)
-        Data:Increment("XP", -XP_PER_LEVEL)
+		Data:Increment("XP", -XP_PER_LEVEL)
 		-- Data:Set("XP", NewXP - XP_PER_LEVEL)
 	end
 end

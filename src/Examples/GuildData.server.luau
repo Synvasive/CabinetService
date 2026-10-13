@@ -27,7 +27,7 @@ local GUILD_TEMPLATE: GuildTemplate = {
 
 local GuildStore = Server.Init({
 	Template = GUILD_TEMPLATE,
-	DocumentName = STORE_NAME,
+	Name = STORE_NAME,
 	PlayerStore = false,
 })
 
@@ -41,6 +41,10 @@ end
 -- Deposit coins into the guild bank using Increment
 local function Deposit(GuildId: string, Amount: number)
 	local Data = GetGuildData(GuildId)
+	if not Data then
+		return
+	end
+
 	local New = Data:Increment("Bank", Amount)
 	print(GuildId, "bank is now:", New)
 end
@@ -48,6 +52,10 @@ end
 -- Add a member by UserId
 local function AddMember(GuildId: string, UserId: number)
 	local Data = GetGuildData(GuildId)
+	if not Data then
+		return
+	end
+
 	local Members = Data:Get("Members")
 
 	if #Members >= MAX_MEMBERS then
@@ -65,6 +73,10 @@ end
 -- Remove a member by UserId
 local function RemoveMember(GuildId: string, UserId: number)
 	local Data = GetGuildData(GuildId)
+	if not Data then
+		return
+	end
+
 	local Members = Data:Get("Members")
 	local Index = table.find(Members, UserId)
 

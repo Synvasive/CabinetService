@@ -16,7 +16,7 @@ An intuitive wrapper for DocumentService with automatic client replication based
 Add CabinetService to your `wally.toml`:
 ```toml
 [dependencies]
-CabinetService = "synvasive/cabinetservice@1.0.0"
+CabinetService = "synvasive/cabinetservice@2.0.0"
 ```
 Then run:
 ```bash
@@ -115,7 +115,7 @@ local GUILD_TEMPLATE = {
 -- PlayerStore = false — you control when documents are opened
 local GuildStore = Server.Init({
     Template = GUILD_TEMPLATE,
-    DocumentName = "GuildData",
+    Name = "GuildData",
     PlayerStore = false,
 })
 
@@ -140,17 +140,22 @@ Initialises a store and returns a handle. Must be called on the server.
 |---|---|---|---|
 | `Name` | `string` | - | DataStore key name |
 | `Template` | `T` | - | Default data shape, also used to generate the type validator |
-| `PlayerStore` | `boolean` | `true` | If true, manages PlayerAdded/PlayerRemoving automatically |
+| `PlayerStore` | `boolean` | `true` | If true, opens and closes each player's document automatically |
 | `Interface` | `((T) -> boolean)?` | auto | Custom type validator — generated from template if omitted |
 | `LockSessions` | `boolean` | `true` | Enables session locking |
-| `UseMock` | `boolean` | `false` | Uses a mock DataStore, data is erased on close |
-| `DontSave` | `boolean` | `false` | Data is erased on server close |
+| `UseMock` | `boolean` | `false` | Uses an in-memory DataStore, data is lost when the server closes |
+| `DontSave` | `boolean` | `false` | Changes are never written to the DataStore |
 | `ResetData` | `boolean` | `false` | Erases data on load |
-| `ViewedUserId` | `number?` | - | Load a different user's data |
+| `ViewedUserId` | `number?` | - | Load a different user's data read-only, without a session lock |
 | `OverridenUserId` | `number?` | - | Override the userId used for the document key |
+| `Replicate` | `"All" \| "Owner" \| "None" \| (Player, Id) -> boolean` | `"Owner"` for player stores, `"All"` otherwise | Which clients receive the document and its changes |
+| `CanFetch` | `((Player, Id, Path?) -> boolean)?` | `Replicate` rule | Which clients may read the document with `Client.Fetch` |
 
 ### `Store.WaitForData(Id)`
-Yields until the document for `Id` is open and returns the `Data` object. Safe to call multiple times — returns immediately if already loaded.
+Yields until the document for `Id` is open and returns the `Data` object, or `nil` if it failed to load or the player left. Safe to call multiple times — returns immediately if already loaded.
+
+### `Store.Close(Id)`
+Saves and closes the document for `Id`. Player documents close automatically when the player leaves — use this for non-player documents you no longer need.
 
 ### Data Object Methods
 
@@ -166,8 +171,14 @@ Yields until the document for `Id` is open and returns the `Data` object. Safe t
 | `Data:OnArrayInserted(Path, Callback)` | Fire callback when an item is inserted |
 | `Data:OnArrayRemoved(Path, Callback)` | Fire callback when an item is removed |
 
+Writes are batched into the DataStore automatically: session-locked documents save on autosave and on close, others at most once every 6 seconds and on close. Pass `false` as the last argument of `Set`, `Update`, `Increment`, `ArrayInsert` or `ArrayRemove` to skip replicating that change to clients.
+
+A template value of `false` accepts any type, so use it for optional fields that may later hold a string, table or number.
+
 ### `Server.Mutate(Name, Id, Mutator)`
 Performs an atomic multi-field write directly through the DataStore. Use this when multiple fields must be saved together as a single write — for everything else, use the Data object methods.
+
+`Mutator` receives a copy of the data. Edit it in place or return a new table. It must not yield. Clients receive the full document afterwards.
 
 ### `Client.Init()`
 Must be called once on the client before any other Client method.
@@ -176,7 +187,7 @@ Must be called once on the client before any other Client method.
 Yields until the server has replicated the document for `Id` and returns the local `Data` object.
 
 ### `Client.Fetch(Name, Id, Path?)`
-Performs a one-off remote read from the server. Useful before replication has arrived.
+Performs a one-off remote read from the server. Useful before replication has arrived, or to read documents that are not replicated to this client. Returns `nil` if the document is not open or `CanFetch` denies the request.
 
 ## Examples
 

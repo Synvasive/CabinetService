@@ -6,17 +6,20 @@
 	.Interface DataInterface -- Interface for handling data validation.
 
 	.Name string -- Name of the document in the data store.
-	.UseMock boolean? -- Use Mock data for testing.
+	.UseMock boolean? -- Use an in-memory DataStore for testing. Data is lost when the server closes.
 	.Migrations { [number]: (data: any) -> any }? -- List of migration functions to update old data formats.
 
-	.ViewedUserId number? -- User ID to view data for. Use to view a specific player's data without saving.
+	.ViewedUserId number? -- User ID to view data for. Opens the document without a session lock and never saves.
 	.OverridenUserId number? -- User ID to override for the profile. Use to play on another player's save.
 
 	.DontSave boolean? -- Prevent saving the profile. Use for testing without saving.
 	.ResetData boolean? -- Reset the data on player join. Use to wipe data for testing
 
-	.PlayerStore boolean? -- Use a ProfileStore. Set to false to use a standard DataStore. Use for non-player data.
-	.LockSessions boolean? -- Lock the session when a profile is loaded. Use to prevent data
+	.PlayerStore boolean? -- Load a document for every player automatically. Set to false for non-player data.
+	.LockSessions boolean? -- Lock the session when a document is loaded. Use to prevent data corruption across servers.
+
+	.Replicate ("All" | "Owner" | "None" | (Player, Id) -> boolean)? -- Which clients receive the data. Defaults to "Owner" for player stores and "All" otherwise.
+	.CanFetch ((Player, Id, Path) -> boolean)? -- Which clients may read a document with Client.Fetch. Defaults to the Replicate rule.
 	
 	```lua
 	local Options = {
@@ -44,6 +47,9 @@ return {
 		ResetData = false,
 		PlayerStore = true,
 		LockSessions = true,
+
+		Replicate = nil,
+		CanFetch = nil,
 	},
 
 	Actions = {
@@ -52,4 +58,6 @@ return {
 		ArrayRemove = 3,
 		Init = 4,
 	},
+
+	WriteDelay = 6,
 }
